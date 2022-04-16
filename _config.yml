@@ -65,26 +65,26 @@ author:
       icon: "fas fa-fw fa-link"
       url: "https://jlanguell.github.io/"
     - label: "HackTheBox"
-      icon: "fab fa-w fa-cube"
+      icon: "fas fa-w fa-cube"
       url: "https://app.hackthebox.com/profile/333346"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/jlanguell"
     - label: "LinkedIn"
       icon: "fab fa-fw fa-linkedin"
-      url: "https://linkedin.com/jacob-languell-6489b21aa"
+      url: "https://linkedin.com/in/jacob-languell-6489b21aa"
 
 footer:
   links:
     - label: "HackTheBox"
-      icon: "fab fa-fw fa-cube"
+      icon: "fas fa-regular fa-fw fa-cube"
       url: "https://app.hackthebox.com/profile/333346"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/jlanguell"
-    - label: "Instagram"
+    - label: "LinkedIn"
       icon: "fab fa-fw fa-linkedin"
-      url: "https://linkedin.com/jacob-languell-6489b21aa"
+      url: "https://linkedin.com/in/jacob-languell-6489b21aa"
 
 defaults:
   # _posts
