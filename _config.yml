@@ -13,12 +13,11 @@
 # you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
-title: MM
-email:
+title: Jacob's Portfolio
+email: jlanguell@student.umgc.edu
 description: >- # this means to ignore newlines until "baseurl:"
-  Write an awesome description for your new site here. You can edit this
-  line in _config.yml. It will appear in your document head meta (for
-  Google search results) and in your feed.xml site description.
+  Resume / Portfolio / Blog for Transitioning Active Duty Member Jacob Languell with Interests in Cybersecurity
+  / Software Development / Software Security / Network Security 
 twitter_username: username
 github_username: jlanguell
 minimal_mistakes_skin: air
@@ -60,32 +59,32 @@ plugins:
 author:
   name   : "Jacob Languell"
   avatar : "/assets/images/bio-photo.jpg"
-  bio    : "My awesome biography constrained to a sentence or two goes here."
+  bio    : "USAF -> Civilian : Python, Java, Bash, SQL, C++ : OSINT, Buffer Overflows, Exploit Development, Network Log Analysis"
   links:
-    - label: "Website"
+    - label: "Portfolio"
       icon: "fas fa-fw fa-link"
-      url: "https://"
-    - label: "Twitter"
-      icon: "fab fa-fw fa-twitter-square"
-      url: "https://twitter.com/"
+      url: "https://jlanguell.github.io/"
+    - label: "HackTheBox"
+      icon: "fab fa-w fa-cube"
+      url: "https://app.hackthebox.com/profile/333346"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
-      url: "https://github.com/"
-    - label: "Instagram"
-      icon: "fab fa-fw fa-instagram"
-      url: "https://instagram.com/"
+      url: "https://github.com/jlanguell"
+    - label: "LinkedIn"
+      icon: "fab fa-fw fa-linkedin"
+      url: "https://linkedin.com/jacob-languell-6489b21aa"
 
 footer:
   links:
-    - label: "Twitter"
-      icon: "fab fa-fw fa-twitter-square"
-      url: "https://twitter.com/"
+    - label: "HackTheBox"
+      icon: "fab fa-fw fa-cube"
+      url: "https://app.hackthebox.com/profile/333346"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/jlanguell"
     - label: "Instagram"
-      icon: "fab fa-fw fa-instagram"
-      url: "https://instagram.com/"
+      icon: "fab fa-fw fa-linkedin"
+      url: "https://linkedin.com/jacob-languell-6489b21aa"
 
 defaults:
   # _posts
