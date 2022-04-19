@@ -1,5 +1,3 @@
-# Welcome to Jekyll!
-#
 # This config file is meant for settings that affect your whole blog, values
 # which you are expected to set up once and rarely edit after that. If you find
 # yourself editing this file very often, consider using Jekyll's data files
@@ -13,14 +11,15 @@
 # you will see them accessed via {{ site.title }}, {{ site.email }}, and so on.
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
-title: Jacob's Portfolio
+
+title: Jacob's Cybersecurity Blog
 email: jlanguell@student.umgc.edu
 description: >- # this means to ignore newlines until "baseurl:"
   Resume / Portfolio / Blog for Transitioning Active Duty Member Jacob Languell with Interests in Cybersecurity
   / Software Development / Software Security / Network Security 
 twitter_username: username
 github_username: jlanguell
-minimal_mistakes_skin: air
+minimal_mistakes_skin: aqua
 search: true
 
 # Build settings
@@ -67,6 +66,9 @@ author:
     - label: "HackTheBox"
       icon: "fas fa-w fa-cube"
       url: "https://app.hackthebox.com/profile/333346"
+    - label: "TryHackMe"
+      icon: "fas fa-w fa-cloud"
+      url: "https://tryhackme.com/p/DeckardJake"
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/jlanguell"

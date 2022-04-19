@@ -1,0 +1,117 @@
+---
+title: "HTB Walkthrough: Netmon"
+date: 2022-04-18T15:34:30-04:00
+categories:
+  - HackTheBox
+tags:
+  - HTB
+  - Easy
+  - FTP
+  - Walkthrough
+  - Internal
+  - Enumeration
+  - Penetration Tester Level 1
+  - Weak Authentication
+  - CVE-2018-9276
+  - CVE Exploitation
+  - Remote Code Execution
+  - Public Vulnerabilities
+  - Windows
+---
+
+![Netmon Logo](/assets/images/netmon/netmon.jpg)
+
+**Welcome** to this walkthrough for [HackTheBox's](https://www.hackthebox.com/) (HTB) machine Netmon. This one is listed as an 'easy' box and has also been retired, so access is only provided to those that have purchased VIP access to HTB.
+Because of this, you may notice that it is necessary to be connected to HTB's VIP VPN server, rather than the free server. To do this, change the dropdown selection in the top right corner where you select "Connect"
+to "VIP" and download the .ovpn package (yes, even as a paid user, you must toggle between free and paid VPN packages depending on the machine).
+
+
+## Service Enumeration
+So after we connect to the VPN via "sudo openvpn xxxxxxx.ovpn", we can turn on the Netmon machine and grab it's IP address. Now its time to run some simple network scans.
+
+```bash
+sudo nmap -sS -A -sV -T4 -v -p- 10.10.10.152 | tee nmap.log
+dirb http://10.10.10.152/ /usr/share/dirb/wordlists/small.txt -f | tee dirb.log
+nikto -h "http://10.10.10.152/" | tee nikto.log
+```
+## Port 21: FTP
+As I am waiting for the scan to finish, I notice that port 21 is open and attempt to login with anonymous FTP(anonymous: ):
+```bash
+└─$ ftp anonymous@10.10.10.152 
+Connected to 10.10.10.152.
+220 Microsoft FTP Service
+331 Anonymous access allowed, send identity (e-mail name) as password.
+Password: 
+230 User logged in.
+Remote system type is Windows_NT.
+ftp>
+```
+Success! We have remote access to the filesystem. Let's go *root* around.
+> Note: Using <em>feat</em> and <em>help</em> will show you available FTP commands that you can execute.  
+> Also: (Using ! before a command will execute the command on your local machine, i.e. Kali)
+
+I always check first to see if I can <em>put</em> or <em>get</em> files, ie. transfer them between local/remote filesystems. It appears I am only able to download files from the remote machine becuase the *get* request returns an error.
+
+## User Flag
+A quick look at the /Users/Public/ folder reveals the quickest user flag I have ever found:
+ 
+![user.txt](/assets/images/netmon/netmon-user.jpg)
+
+Alright, so after a few attempts to gain more information about the system, we see that there is a service named PRTG that seems very prevalent across important folders.
+This may indicate that we want to take a look at some of this program's data files.  
+
+Navigating to "/ProgramData/Paessler/PRTG Network Monitor/" we find multiple PRTG Config files... Bingo.
+It is worth our while to <em>get</em> these config files, transferring them to our own system, so that we may run some data-grepping commands.  
+With little effort, we come across <b>prtgadmin credentials</b> in <em>PRTG Configuration.old</em>
+> **prtgadmin:PrTg@dmin2018**
+
+!['prtgadmin' credentials in old config. file](/assets/images/netmon/prtgadmin-creds.jpg)
+
+Let's check out our network scans:
+
+![nmap scan](/assets/images/netmon/nmap.jpg)
+
+## Port 80: HTTP PRTG Network Monitor (NETMON)
+Navigating to the IP address in our browser redirects us to the NETMON login page:
+
+![NETMON login page](/assets/images/netmon/prtg.jpg)
+
+A quick Google shows us that the default credentials for PRTG are:
+> **prtgadmin:prtgadmin**
+
+However, this results in an invalid login. 
+When we attempt <b>prtgadmin:PrTg@dmin2018</b> that we found earlier, we also get an invalid credentials error.
+However, using a year at the end of a password is extremely common, and so is reusing passwords. Assuming a system doesn't allow a user to reuse a password, and that the user is lazy (oof), and also the file we found these credentials had the extension ".old", let's try:
+> **prtgadmin:PrTg@dmin2019**
+
+Success!
+
+## Exploit & Root the Service
+Now, there are still network scans to go through, as well as plenty of traffic (via Burpsuite, inspect source, etc.) to capture and fuzzing (for SQL injection, XSS, etc.).
+But I will cut to the chase where I did a quick look for public exploits on this service:
+
+![Searchsploit Results](/assets/images/netmon/searchsploit.jpg)
+
+This netted us four results, and comparing the version numbers with what I gained earlier via basic web enumeration, this system may be vulnerable to Authenticated Remote Code Execution via:
+> **Exploit Database:** [CVE-2018-9276](https://www.exploit-db.com/exploits/46527)
+
+This exploit can be modified and run as a bash script to suit your needs, but what it essentially does is take advantage of the PRTG notification system to execute user-provided RCE.
+These commands can also be executed in the web browser manually.
+For utmost simplicity, use the exploit found in Metasploit by using the command <em>msfconsole</em> and setting it up in this way, using 'set' *parameter_name* *variable*:
+
+```bash
+Example:
+set rhosts 10.10.10.152
+set lhost tun0
+set admin_password PrTg@dmin2019
+etc, etc
+```
+
+![Metasploit RCE Configuration](/assets/images/netmon/msf.jpg)
+
+Hooray! We got a shell. Now let's grab that root flag and be done with it:
+
+![SYSTEM reverse TCP shell](/assets/images/netmon/shell.jpg)
+
+![Root Flag](/assets/images/netmon/root-flag.jpg)
+
