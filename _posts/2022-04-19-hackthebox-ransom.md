@@ -30,7 +30,7 @@ to "VIP" and download the .ovpn package (yes, even as a paid user, you must togg
 
 Start by connecting to the VPN server and fire up the box. After a couple minutes, we can ping it to make sure its online and then proceed with our simple network scans:
 
-> Note: I checked for ports 80 and 443 first by punching **10.10.11.153:80** and **10.10.11.152:443** into my web browser. Since port 80, HTTP pulled up a website, I know to start scans to enumerate this service. 
+> Note: I checked for ports 80 and 443 first by punching **10.10.11.153:80** and **10.10.11.153:443** into my web browser. Since port 80, HTTP pulled up a website, I know to start scans such as nikto and dirb to enumerate this service. 
 
 ```bash
 $ sudo nmap -sS -A -sV -T4 -p- 10.10.11.153 | tee nmap_full.txt
