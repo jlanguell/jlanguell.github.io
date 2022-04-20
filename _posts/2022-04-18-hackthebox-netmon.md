@@ -19,7 +19,7 @@ tags:
   - Windows
 ---
 
-![Netmon Logo](/assets/images/netmon.HTB/netmon2.jpg)
+![Netmon Logo](/assets/images/HTB/netmon/netmon.jpg)
 
 **Welcome** to this walkthrough for [HackTheBox's](https://www.hackthebox.com/) (HTB) machine Netmon. This one is listed as an 'easy' box and has also been retired, so access is only provided to those that have purchased VIP access to HTB.
 Because of this, you may notice that it is necessary to be connected to HTB's VIP VPN server, rather than the free server. To do this, change the dropdown selection in the top right corner where you select "Connect"
@@ -55,7 +55,7 @@ I always check first to see if I can <em>put</em> or <em>get</em> files, ie. tra
 ## User Flag
 A quick look at the /Users/Public/ folder reveals the quickest user flag I have ever found:
  
-![user.txt](/assets/images/netmon/netmon-user.jpg)
+![user.txt](/assets/images/HTB/netmon/netmon-user.jpg)
 
 Alright, so after a few attempts to gain more information about the system, we see that there is a service named PRTG that seems very prevalent across important folders.
 This may indicate that we want to take a look at some of this program's data files.  
@@ -65,16 +65,16 @@ It is worth our while to <em>get</em> these config files, transferring them to o
 With little effort, we come across <b>prtgadmin credentials</b> in <em>PRTG Configuration.old</em>
 > **prtgadmin:PrTg@dmin2018**
 
-!['prtgadmin' credentials in old config. file](/assets/images/netmon/prtgadmin-creds.jpg)
+![prtgadmin credentials in an old .config file](/assets/images/HTB/netmon/prtgadmin-creds.jpg)
 
 Let's check out our network scans:
 
-![nmap scan](/assets/images/netmon/nmap.jpg)
+![nmap scan](/assets/images/HTB/netmon/nmap.jpg)
 
 ## Port 80: HTTP PRTG Network Monitor (NETMON)
 Navigating to the IP address in our browser redirects us to the NETMON login page:
 
-![NETMON login page](/assets/images/netmon/prtg.jpg)
+![NETMON login page](/assets/images/HTB/netmon/prtg.jpg)
 
 A quick Google shows us that the default credentials for PRTG are:
 > **prtgadmin:prtgadmin**
@@ -90,7 +90,7 @@ Success!
 Now, there are still network scans to go through, as well as plenty of traffic (via Burpsuite, inspect source, etc.) to capture and fuzzing (for SQL injection, XSS, etc.).
 But I will cut to the chase where I did a quick look for public exploits on this service:
 
-![Searchsploit Results](/assets/images/netmon/searchsploit.jpg)
+![Searchsploit Results](/assets/images/HTB/netmon/searchsploit.jpg)
 
 This netted us four results, and comparing the version numbers with what I gained earlier via basic web enumeration, this system may be vulnerable to Authenticated Remote Code Execution via:
 > **Exploit Database:** [CVE-2018-9276](https://www.exploit-db.com/exploits/46527)
@@ -107,11 +107,11 @@ set admin_password PrTg@dmin2019
 etc, etc
 ```
 
-![Metasploit RCE Configuration](/assets/images/netmon/msf.jpg)
+![Metasploit RCE Configuration](/assets/images/HTB/netmon/msf.jpg)
 
 Hooray! We got a shell. Now let's grab that root flag and be done with it:
 
-![SYSTEM reverse TCP shell](/assets/images/netmon/shell.jpg)
+![SYSTEM reverse TCP shell](/assets/images/HTB/netmon/shell.jpg)
 
-![Root Flag](/assets/images/netmon/root-flag.jpg)
+![Root Flag](/assets/images/HTB/netmon/root-flag.jpg)
 
