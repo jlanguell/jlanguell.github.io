@@ -19,7 +19,7 @@ tags:
   - Windows
 ---
 
-![Netmon Logo](/assets/images/netmon/netmon.jpg)
+![Netmon Logo](/assets/images/netmon.HTB/netmon2.jpg)
 
 **Welcome** to this walkthrough for [HackTheBox's](https://www.hackthebox.com/) (HTB) machine Netmon. This one is listed as an 'easy' box and has also been retired, so access is only provided to those that have purchased VIP access to HTB.
 Because of this, you may notice that it is necessary to be connected to HTB's VIP VPN server, rather than the free server. To do this, change the dropdown selection in the top right corner where you select "Connect"
