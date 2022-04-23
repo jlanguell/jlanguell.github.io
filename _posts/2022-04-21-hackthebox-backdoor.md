@@ -38,10 +38,10 @@ So I used my view-source hotkey (CTRL+U) to check out some of the page's content
 
 There is definitely a lot going on here:
 
-> Possible application/json POST requests
-> Possible Javascript exploits
-> Lots of public directories listed (/wp-content/) (/wp-includes/)
-> A WordPress version number: 5.8.1
+> Possible application/json POST requests  
+> Possible Javascript exploits  
+> Lots of public directories listed (/wp-content/) (/wp-includes/)  
+> A WordPress version number: 5.8.1  
 
 I intercepted a few requests in Burpsuite and also tried to inject different things into the browser.
 
