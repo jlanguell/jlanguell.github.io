@@ -25,6 +25,7 @@ tags:
 Because of this, you may notice that it is necessary to be connected to HTB's VIP VPN server, rather than the free server. To do this, change the dropdown selection in the top right corner where you select "Connect"
 to "VIP" and download the .ovpn package (yes, even as a paid user, you must toggle between free and paid VPN packages depending on the machine).
 
+---
 
 ## Service Enumeration
 So after we connect to the VPN via "sudo openvpn xxxxxxx.ovpn", we can turn on the Netmon machine and grab it's IP address. Now its time to run some simple network scans.

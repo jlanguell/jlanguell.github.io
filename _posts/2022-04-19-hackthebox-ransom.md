@@ -26,6 +26,8 @@ tags:
 Because of this, you may notice that it is necessary to be connected to HTB's VIP VPN server, rather than the free server. To do this, change the dropdown selection in the top right corner where you select "Connect"
 to "VIP" and download the .ovpn package (yes, even as a paid user, you must toggle between free and paid VPN packages depending on the machine).
 
+---
+
 ## Service Enumeration
 
 Start by connecting to the VPN server and fire up the box. After a couple minutes, we can ping it to make sure its online and then proceed with our simple network scans:
