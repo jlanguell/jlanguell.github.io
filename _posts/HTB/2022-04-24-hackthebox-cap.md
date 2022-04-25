@@ -18,16 +18,16 @@ tags:
 
 ![Backdoor Logo](/assets/images/HTB/cap/cap.jpg)
 
-## ---------- DISCLAIMER! ----------
+## --- DISCLAIMER! ---
 I would like to begin by saying that if you have not tried this box by yourself first, I recommend you do, as this box was extremely easy to exploit fully.  
 
-**HINT** Use Burpsuite to intercept the Security Snapshot nav-bar tab, and read its response...
----------------------------------
+**HINT** Use Burpsuite to intercept the Security Snapshot nav-bar tab, and read its response.  
+
 If you still wish to proceed then...  
+
 **Welcome** to this walkthrough for the [Hack The Box](https://www.hackthebox.com/) machine Cap. This one is listed as a 'easy' box and has also been retired, so access is only provided to those that have purchased VIP access to HTB.
 Because of this, you may notice that it is necessary to be connected to HTB's VIP VPN server, rather than the free server. To do this, change the dropdown selection in the top right corner where you select "Connect"
 to "VIP" and download the .ovpn package (yes, even as a paid user, you must toggle between free and paid VPN packages depending on the machine).
-
 ---
 ## Service/Application Enumeration
 
