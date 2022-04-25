@@ -58,9 +58,9 @@ plugins:
 author:
   name   : "Jacob Languell"
   avatar : "/assets/images/bio-photo.jpg"
-  bio    : § Software Development/Cybersecurity §
-           § UMGC Cyber Team §
-           § Java/Python/Bash/SQL/Git §
+  bio    : § Software Development/Cybersecurity §  
+           § UMGC Cyber Team §  
+           § Java/Python/Bash/SQL/Git §  
   links:
     - label: "Portfolio"
       icon: "fas fa-fw fa-link"
