@@ -94,7 +94,11 @@ defaults:
       path: ""
       type: posts
     values:
+      toc: true
+      toc_label: "Table of Contents"
+      toc_icon: "cog"
       layout: single
+      classes: wide
       author_profile: true
       read_time: true
       comments: true
@@ -105,6 +109,8 @@ defaults:
       path: "_pages"
       type: pages
     values:
+      entries_layout: grid
+      classes: wide
       layout: single
       author_profile: true
 
