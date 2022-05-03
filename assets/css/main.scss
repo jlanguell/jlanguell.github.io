@@ -4,17 +4,17 @@
 
 @charset "utf-8";
 
-$nav-background-color: #daf2da;
-
+$nav-background-color: #e8f1fb;
+$background-color: #e3faf8;
 
 @import "minimal-mistakes/skins/{{ site.minimal_mistakes_skin | default: 'default' }}"; // skin
 @import "minimal-mistakes"; // main partials
 
 .masthead{
-	border-bottom: 2px solid #000;
-	background-color: #daf2da
+	border-bottom: 2px solid #0f477e;
+	background-color: #e8f1fb
 }
 
 .greedy-nav {
-	background-color: #daf2da
+	background-color: #e8f1fb
 }
