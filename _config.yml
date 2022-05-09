@@ -60,7 +60,7 @@ author:
   avatar : "/assets/images/bio-photo.jpg"
   bio    : "§ Software Dev./Cybersec. §<br>§ UMGC Cyber Team §<br>§ Java/Python/Bash/SQL/Git §"
   links:
-    - label: "Portfolio"
+    - label: "Cyber Blog"
       icon: "fas fa-fw fa-link"
       url: "https://jlanguell.github.io/"
     - label: "HackTheBox"
