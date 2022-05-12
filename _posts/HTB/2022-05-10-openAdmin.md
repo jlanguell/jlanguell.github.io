@@ -358,7 +358,7 @@ I logged into the mysql DB locally but couldn't find any further useful informat
 >mysql -u ona_sys -p -h localhost  
 >n1nj4W4rri0R!  
 
-## User Shell - jimmy  
+### User Shell - jimmy  
 
 After scouring the local database, I decided to try the password to switch user (*su*) :  
 
@@ -435,7 +435,7 @@ Once we are logged in, we see joanna's rsa private key in plain text, as per the
 
 Let's crack it with john and login to joanna over SSH :  
 
-## User Shell - joanna  
+### User Shell - joanna  
 
 First, copy the contents from ---BEGIN to ---END lines into a new file called id_rsa (ensure there is 1 empty line at the end of the file, save & close)  
 
