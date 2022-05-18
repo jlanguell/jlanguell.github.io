@@ -8,6 +8,10 @@ header:
 tags:
   - Easy
   - Linux Host
+  - Internal
+  - Subdomain
+  - OS Injection
+  - RCE
 ---
 
 ![Antique Logo](/assets/images/HTB/horizontall/horizontall.png)  
@@ -179,7 +183,7 @@ This version of Strapi is actually vulnerable to **two different CVE's**
 
 ### CVE-2019-18818  
 
-![NIST Description](assets/images/HTB/horizontall/18818.png)  
+![NIST Description](/assets/images/HTB/horizontall/18818.png)  
 
 According to the National Institute of Standards and Technology (NIST):  
 
@@ -191,7 +195,7 @@ There is more information about this vulnerability [here](https://nvd.nist.gov/v
 
 ### CVE-2019-19609  
 
-![NIST Description](assets/images/HTB/horizontall/19609.png)  
+![NIST Description](/assets/images/HTB/horizontall/19609.png)  
 
 According to the National Institute of Standards and Technology (NIST):  
 
