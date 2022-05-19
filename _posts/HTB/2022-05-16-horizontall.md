@@ -12,6 +12,9 @@ tags:
   - Subdomain
   - OS Injection
   - RCE
+  - PHP
+  - SSH
+  - Laravel
 ---
 
 ![Antique Logo](/assets/images/HTB/horizontall/horizontall.png)  
@@ -569,7 +572,7 @@ Doing some more internet research, I discovered that the answer was to try optio
 
 The idea is that the exploit uses an RCE class that is defined inside a PHP Gadgetchain like so :  
 
-[GadgetChains](/assets/images/HTB/horizontall/gadgetchains.png)  
+![GadgetChains](/assets/images/HTB/horizontall/gadgetchains.png)  
 
 But each one I try fails. This exploit code does not work for us. If we try using a better one online, from say, [Github]()
 
