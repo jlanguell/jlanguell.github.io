@@ -16,6 +16,6 @@ My computer/cyber hobbies typically revolve around:
 - And sharpening my ethical hacking skills via TryHackMe, HackTheBox, Portswigger Academy, etc.  
 
 
-Please reach out through the listed social media links if you have any comments/questions/suggestings about the content of this webpage.  
+Please reach out through the listed social media links if you have any comments/questions/suggestions about the content of this webpage.  
 
 
