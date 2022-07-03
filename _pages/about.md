@@ -10,10 +10,10 @@ this website serves as a resource for myself as much it does others.
 
 My computer/cyber hobbies typically revolve around:  
 
--Enhancing my current software toolbox or hardware setup  
--Programming/Scripting (sometimes in AWS) with Python, Java, Bash, SQL  
--Competing in CTF Challenges  
--And sharpening my ethical hacking skills via TryHackMe, HackTheBox, Portswigger Academy, etc.  
+- Enhancing my current software toolbox or hardware setup  
+- Programming/Scripting (sometimes in AWS) with Python, Java, Bash, SQL  
+- Competing in CTF Challenges  
+- And sharpening my ethical hacking skills via TryHackMe, HackTheBox, Portswigger Academy, etc.  
 
 
 Please reach out through the listed social media links if you have any comments/questions/suggestings about the content of this webpage.  
