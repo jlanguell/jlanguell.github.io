@@ -4,7 +4,7 @@ date: 2022-07-11T22:46:30-04:00
 categories:
   - HackTheBox
 header:
-  teaser: /assets/images/HTB/traverxec/traverxec.png
+  teaser: /assets/images/HTB/traverxec/Traverxec.png
 tags:
   - Easy
   - Linux Host
@@ -17,7 +17,7 @@ tags:
   - RCE
 ---
 
-![Traverxec Logo](/assets/images/HTB/traverxec/traverxec.png)  
+![Traverxec Logo](/assets/images/HTB/traverxec/Traverxec.png)  
 
 ---
 
@@ -166,14 +166,15 @@ js                      [Status: 301, Size: 314, Words: 19, Lines: 14, Duration:
 These results didn't return much, we see that the homepage '/' and '/#' returned a status code of 200 (good).  
 
 
-## OpenSSH Reconnaissance  
+## Service Reconnaissance  
 
+### OpenSSH Reconnaissance  
 
 I looked at Searchsploit results for vulnerable OpenSSH versions, but didn't find any specific to 7.9p1. However, an authenticated privilege escalation (PE) vulnerability appeared for an unspecified version of Debian OpenSSH (the one we detected via nmap). Meaning, if we can gain low level access, this may be a plausible PE vector for later, so I'll save it.  
 
 ![OpenSSH Searchsploit](/assets/images/HTB/traverxec/openssh.png)  
 
-## Nostromo Web Server Reconnaissance  
+### Nostromo Web Server Reconnaissance  
 
 First, let's use Searchsploit to see if there is an existing vulnerability for our Nostromo service version:  
 
