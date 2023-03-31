@@ -58,7 +58,7 @@ plugins:
 author:
   name   : "Jacob Languell"
   avatar : "/assets/images/bio-photo.jpg"
-  bio    : "§ Software Dev./Cybersec. §<br>§ UMGC Cyber Team §<br>§ Java/Python/Bash/SQL/Git §"
+  bio    : "§ Jr. Pentester §<br>§ Software Background §<br>§ Avid Researcher §"
   links:
     - label: "Cyber Blog"
       icon: "fas fa-fw fa-link"
@@ -72,9 +72,6 @@ author:
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/jlanguell"
-    - label: "LinkedIn"
-      icon: "fab fa-fw fa-linkedin"
-      url: "https://linkedin.com/in/jacob-languell-6489b21aa"
 
 footer:
   links:
@@ -84,9 +81,6 @@ footer:
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/jlanguell"
-    - label: "LinkedIn"
-      icon: "fab fa-fw fa-linkedin"
-      url: "https://linkedin.com/in/jacob-languell-6489b21aa"
 
 defaults:
   # _posts
