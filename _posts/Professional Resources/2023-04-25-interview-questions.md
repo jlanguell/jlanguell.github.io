@@ -2,7 +2,7 @@
 title: "Some Interview Questions I've Been Asked"
 date: 2023-04-25T22:46:30-04:00 
 categories:
-  - Professional Resources
+  - Professional-Resources
 header:
   teaser: /assets/images/Professional-Resources/Interview.png
 tags:
