@@ -15,6 +15,8 @@ tags:
 
 ---
 
+---  
+
 ### What is the main difference between x64 and ARM? (while discussing buffer overflows and instruction codes)
 
 
@@ -40,4 +42,6 @@ Load B, 1301
 Mul A, B
 Store 1300, A
 ```  
+
+---  
 
