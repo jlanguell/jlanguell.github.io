@@ -15,8 +15,6 @@ tags:
 
 ---
 
----  
-
 ### What is the main difference between x64 and ARM? (while discussing buffer overflows and instruction codes)
 
 
